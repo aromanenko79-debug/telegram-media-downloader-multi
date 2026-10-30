@@ -35,7 +35,7 @@ def format_size(byte_count):
 
 
 def format_rate(bytes_per_second):
-    return format_size(bytes_per_second) + '/с'
+    return format_size(bytes_per_second) + ('/s' if language() == 'en' else '/с')
 
 
 def expected_size(message):
