@@ -14,6 +14,16 @@ A Windows-oriented personal Telegram photo/video archiver using Telethon, QR log
 - SQLite index helps avoid redownloading completed media after restart.
 - Optional monitoring for new files while the application stays open.
 
+## Where to extract the app (Windows)
+
+This is a portable Python project: **no D: drive or special installation folder required**. Download **Code → Download ZIP**, then **Extract All** to a writable directory. For example, `C:\Users\YOUR_NAME\Apps\TelegramMediaDownloader\`. You may choose any other writable folder or drive. Do not run the `.cmd` launcher directly inside the ZIP.
+
+Keep all project files and the `locales` subfolder together. Double-click `start_multi_windows.cmd` in the extracted directory. You do not need to use `Program Files` or administrator privileges.
+
+**Program directory and media archive directory are separate.** Choose the archive location when prompted, for example `C:\Users\YOUR_NAME\Videos\TelegramArchive`. The application creates `chat_<id>/photos`, `chat_<id>/videos` and `chat_<id>/download_state.sqlite3` under the chosen archive directory. Ensure there is enough free space.
+
+Local `settings.json` and `telegram_account.session` live beside the Python scripts and must remain private. For an upgrade, extract a fresh version separately, copy these two local files into the new program folder, and leave the existing media archive and SQLite database in place.
+
 ## Start (Windows)
 
 1. Install Python 3.10+.
