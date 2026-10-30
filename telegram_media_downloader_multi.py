@@ -208,7 +208,7 @@ class MultiDownloader:
                 reporter.cancel()
                 await asyncio.gather(reporter, return_exceptions=True)
                 live.update(self.dashboard())
-        print(f'\n{tr('done_label')} {self.existing}; {tr('downloaded')} {self.completed}; {tr('errors')} {self.failed}.')
+        print(f"\n{tr('done_label')} {self.existing}; {tr('downloaded')} {self.completed}; {tr('errors')} {self.failed}.")
         print(tr("folder"), self.base)
         if self.errors:
             report = self.base / 'download_errors.txt'
@@ -235,7 +235,7 @@ async def main():
         await authorize_qr(client)
         entity, chat_id, chat_name = await choose_chat(client)
         root_default = settings.get('download_folder') or r'E:\TelegramArchive'
-        typed = input(f'{tr('archive_folder')} [Enter = {root_default}]: ').strip().strip('"')
+        typed = input(f"{tr('archive_folder')} [Enter = {root_default}]: ').strip().strip('"")
         root = Path(os.path.expandvars(typed or root_default)).expanduser().resolve()
         settings['download_folder'] = str(root)
         raw_parallel = input(tr("concurrent")).strip()
@@ -243,7 +243,7 @@ async def main():
         if not 1 <= parallel <= 6:
             raise ValueError(tr("range_error"))
         write_settings(settings)
-        print(f'{tr('chat')} {chat_name}; {tr('directory')} {root / f"chat_{chat_id}"}; {tr('parallel')} {parallel}')
+        print(f"{tr('chat')} {chat_name}; {tr('directory')} {root / f"chat_{chat_id}"}; {tr('parallel')} {parallel}")
         dl = MultiDownloader(client, chat_id, root, parallel)
         tasks = set()
         try:
@@ -283,6 +283,6 @@ if __name__ == '__main__':
     try:
         asyncio.run(main())
     except (KeyboardInterrupt, asyncio.CancelledError, EOFError):
-        print('\nОстановлено. Готовые файлы и база сохранены.')
+        print("\n" + tr("stopped"))
     except Exception as exc:
-        print(f'\n{tr('error')} {type(exc).__name__}: {exc}')
+        print(f"\n{tr('error')} {type(exc).__name__}: {exc}")
