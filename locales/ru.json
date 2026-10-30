@@ -78,5 +78,19 @@
   "watching_old": "Следим за новыми фото и видео. Для выхода нажмите Ctrl+C.",
   "stopped_old": "Остановлено. Уже скачанные файлы сохранены.",
   "network": "Если это ошибка сети, проверьте связь с Telegram и попробуйте позже.",
-  "read_settings_error": "Не удалось прочитать settings.json:"
+  "read_settings_error": "Не удалось прочитать settings.json:",
+  "qr_save_png": "Не получилось сохранить PNG QR-кода:",
+  "qr_open_png": "Если QR плохо видно в консоли, откройте файл:",
+  "file_done": "скачано файлов:",
+  "all_done": "ГОТОВО.",
+  "previous": "уже было:",
+  "messages_checked": "Проверено сообщений:",
+  "limit": "Telegram ограничил скорость; пауза",
+  "seconds": "сек.",
+  "repeat": "Повтор загрузки ID",
+  "failed_id": "Не скачан ID",
+  "save_folder": "Папка:",
+  "num_scanned": "сообщений;",
+  "old_count": "уже было",
+  "downloaded_count": "скачано"
 }
