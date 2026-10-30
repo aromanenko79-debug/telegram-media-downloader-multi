@@ -1,0 +1,28 @@
+name: Python checks
+on:
+  push:
+    branches: [main]
+  pull_request:
+jobs:
+  syntax:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ['3.10', '3.12']
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+      - name: Compile Python sources
+        run: python -m compileall -q telegram_media_downloader_qr.py telegram_media_downloader_multi.py i18n.py
+      - name: Check both translation dictionaries
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          en=json.loads(Path("locales/en.json").read_text(encoding="utf-8"))
+          ru=json.loads(Path("locales/ru.json").read_text(encoding="utf-8"))
+          assert set(en)==set(ru), "Locale keys mismatch"
+          print(f"{len(en)} bilingual entries OK")
+          PY
