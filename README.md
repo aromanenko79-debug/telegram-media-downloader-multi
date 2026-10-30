@@ -4,7 +4,7 @@
 
 **Language support:** English by default on first run, Russian available from the language menu. The selection is saved in `settings.json`. Translations live in `locales/en.json` and `locales/ru.json`.
 
-A Windows-oriented personal Telegram photo/video archiver using Telethon, QR login and a Rich live progress dashboard. Russian-language prompts.
+A Windows-oriented personal Telegram photo/video archiver using Telethon, QR login and a Rich live progress dashboard. Bilingual English/Russian interface.
 
 ## Features
 
