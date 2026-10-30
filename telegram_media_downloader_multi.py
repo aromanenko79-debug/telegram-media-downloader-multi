@@ -15,7 +15,7 @@ from rich.progress import ProgressBar
 from rich.panel import Panel
 
 # Reuse the tested QR sign-in, dialog selection and naming logic from the previous release.
-from i18n import tr, configure_language
+from i18n import tr, configure_language, language
 from telegram_media_downloader_qr import (
     BASE, read_settings, write_settings, get_api_credentials,
     authorize_qr, choose_chat, media_kind, media_extension, safe_folder_path,
@@ -27,10 +27,10 @@ MIB = 1024 * 1024
 def format_size(byte_count):
     """Readable IEC-scaled file size; keep decimal comma for Russian locale."""
     amount = max(0.0, float(byte_count or 0))
-    for unit in ('Б', 'КБ', 'МБ', 'ГБ', 'ТБ'):
-        if amount < 1024 or unit == 'ТБ':
+    for unit in (('B', 'KB', 'MB', 'GB', 'TB') if language() == 'en' else ('Б', 'КБ', 'МБ', 'ГБ', 'ТБ')):
+        if amount < 1024 or unit in ('ТБ', 'TB'):
             digits = 0 if unit == 'Б' else 1
-            return f'{amount:.{digits}f}'.replace('.', ',') + f' {unit}'
+            return (f'{amount:.{digits}f}'.replace('.', ',') if language() == 'ru' else f'{amount:.{digits}f}') + f' {unit}'
         amount /= 1024
 
 
