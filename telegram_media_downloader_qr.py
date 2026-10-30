@@ -16,6 +16,7 @@ import sqlite3
 from pathlib import Path
 from urllib.parse import urlparse
 
+from i18n import tr, configure_language
 from telethon import TelegramClient, events, utils
 from telethon.errors import FloodWaitError, SessionPasswordNeededError, AuthTokenExpiredError
 import qrcode
@@ -31,7 +32,7 @@ def read_settings():
         try:
             return json.loads(SETTINGS.read_text(encoding="utf-8"))
         except (ValueError, OSError) as exc:
-            print(f"Не удалось прочитать settings.json: {exc}")
+            print(f"{tr('read_settings_error')} {exc}")
     return {}
 
 
@@ -44,13 +45,13 @@ def write_settings(settings):
 
 def get_api_credentials(settings):
     print("\nАвторизация через ваш собственный Telegram (не бот BotFather).")
-    print("API ID и API HASH можно получить на https://my.telegram.org → API development tools")
+    print(tr("api_help"))
     if not str(settings.get("api_id", "")).isdigit():
-        settings["api_id"] = input("Введите API ID: ").strip()
+        settings["api_id"] = input(tr("api_id")).strip()
     if not settings.get("api_hash"):
-        settings["api_hash"] = input("Введите API HASH: ").strip()
+        settings["api_hash"] = input(tr("api_hash")).strip()
     if not str(settings["api_id"]).isdigit() or not settings["api_hash"]:
-        raise ValueError("API ID должен быть числом, API HASH не может быть пустым.")
+        raise ValueError(tr("api_invalid"))
     write_settings(settings)
     return int(settings["api_id"]), settings["api_hash"]
 
@@ -106,12 +107,12 @@ async def choose_chat(client):
     print("\nПолучаю список доступных чатов…")
     dialogs = [d async for d in client.iter_dialogs()]
     if not dialogs:
-        raise RuntimeError("Нет доступных чатов у этого аккаунта.")
-    print(f"Доступно диалогов: {len(dialogs)}")
+        raise RuntimeError(tr("no_dialogs"))
+    print(f"{tr('dialog_count')} {len(dialogs)}")
     for i, d in enumerate(dialogs[:30], 1):
         print(f"  {i:>3}. {d.name}")
     if len(dialogs) > 30:
-        print("  ... показаны первые 30. Можно найти любой чат по части названия.")
+        print(tr("first30"))
 
     while True:
         raw = input("\nВведите номер, название чата, @username или ссылку t.me: ").strip()
@@ -121,29 +122,29 @@ async def choose_chat(client):
             idx = int(raw) - 1
             if 0 <= idx < len(dialogs):
                 d = dialogs[idx]
-                print(f"Выбран чат: {d.name}")
+                print(f"{tr('chosen')} {d.name}")
                 return d.entity, utils.get_peer_id(d.entity), d.name
-            print("Нет чата с таким номером.")
+            print(tr("no_number"))
             continue
         found_private = re.search(r"(?:https?://)?t\.me/c/(\d+)", raw)
         if found_private:
             private_peer_id = -int("100" + found_private.group(1))
             match = next((d for d in dialogs if utils.get_peer_id(d.entity) == private_peer_id), None)
             if match:
-                print(f"Выбран чат: {match.name}")
+                print(f"{tr('chosen')} {match.name}")
                 return match.entity, private_peer_id, match.name
-            print("Такого частного чата нет среди доступных аккаунту диалогов.")
+            print(tr("private_missing"))
             continue
         matches = [d for d in dialogs if raw.casefold() in (d.name or "").casefold()]
         if matches:
             if len(matches) == 1:
                 d = matches[0]
-                print(f"Выбран чат: {d.name}")
+                print(f"{tr('chosen')} {d.name}")
                 return d.entity, utils.get_peer_id(d.entity), d.name
-            print("Есть несколько совпадений:")
+            print(tr("matches"))
             for i, d in enumerate(matches[:50], 1):
                 print(f"  {i}. {d.name}")
-            num = input("Номер подходящего чата (или Enter для нового поиска): ").strip()
+            num = input(tr("choose_match")).strip()
             if num.isdecimal() and 1 <= int(num) <= min(len(matches), 50):
                 d = matches[int(num) - 1]
                 return d.entity, utils.get_peer_id(d.entity), d.name
@@ -151,11 +152,11 @@ async def choose_chat(client):
         try:
             entity = await client.get_entity(resolve_link_to_name(raw))
         except Exception as exc:
-            print(f"Не удалось открыть чат: {exc}. Уточните название или ссылку.")
+            print(f"{tr('cant_open')} {exc}. {tr('clarify')}")
             continue
         peer_id = utils.get_peer_id(entity)
         display_name = utils.get_display_name(entity)
-        print(f"Выбран чат: {display_name}")
+        print(f"{tr('chosen')} {display_name}")
         return entity, peer_id, display_name
 
 
@@ -211,10 +212,10 @@ class Downloader:
                     try:
                         result = await self.client.download_media(message, file=str(temp_path))
                         if not result:
-                            raise RuntimeError("Telegram не отдал файл (возможны ограничения чата)")
+                            raise RuntimeError(tr("telegram_no_file"))
                         received_path = Path(result)
                         if not received_path.is_file():
-                            raise RuntimeError("Загруженный файл не обнаружен")
+                            raise RuntimeError(tr("file_missing"))
                         received_path.replace(file_path)
                         count = file_path.stat().st_size
                         self.conn.execute("INSERT OR REPLACE INTO saved VALUES (?,?,?)", (message.id, relative, count))
@@ -230,7 +231,7 @@ class Downloader:
                             raise
                         print(f"Повтор загрузки ID {message.id}: {exc}")
                         await asyncio.sleep((attempt + 1) * 3)
-                raise RuntimeError("Превышено число повторных попыток")
+                raise RuntimeError(tr("max_retries"))
             except Exception as exc:
                 self.error_count += 1
                 print(f"  ! Не скачан ID {message.id}: {type(exc).__name__}: {exc}")
@@ -246,12 +247,12 @@ class Downloader:
         async for message in self.client.iter_messages(entity, limit=None):
             self.scanned += 1
             if self.scanned % 500 == 0:
-                print(f"Проверено {self.scanned} сообщений; скачано {self.saved_count}; уже было {self.existing_count}; ошибок {self.error_count}")
+                print(f"{tr('checked')} {self.scanned} сообщений; скачано {self.saved_count}; уже было {self.existing_count}; {tr('errors')} {self.error_count}")
             await self.save(message)
-        print(f"\nГОТОВО. Проверено сообщений: {self.scanned}; скачано файлов: {self.saved_count}; уже было: {self.existing_count}; ошибок: {self.error_count}.")
-        print("Папка:", self.base)
+        print(f"\nГОТОВО. {tr('checked')} сообщений: {self.scanned}; скачано файлов: {self.saved_count}; уже было: {self.existing_count}; {tr('errors')} {self.error_count}.")
+        print(tr("folder"), self.base)
         if self.error_count:
-            print("Если были ошибки, просто запустите снова — программа повторит несохранённые файлы.")
+            print(tr("if_errors"))
 
 
 
@@ -282,11 +283,11 @@ def display_qr(url: str, qr_file: Path):
 async def authorize_qr(client: TelegramClient):
     """Авторизация Telegram через QR, без SMS/служебного кода."""
     if await client.is_user_authorized():
-        print("Авторизация уже сохранена. QR-код не нужен.")
+        print(tr("already_auth"))
         return
     print("\nВХОД ПО QR-КОДУ (никаких SMS не требуется)")
-    print("На телефоне откройте Telegram -> Настройки -> Устройства -> Подключить устройство")
-    print("Отсканируйте QR-код с этого экрана и подтвердите вход.")
+    print(tr("phone_steps"))
+    print(tr("scan_qr"))
     print("Если код устарел, программа создаст новый автоматически.\n")
     qr_file = BASE / "telegram_login_qr.png"
     try:
@@ -299,15 +300,15 @@ async def authorize_qr(client: TelegramClient):
                 await qr.wait(timeout=seconds_left)
                 break
             except SessionPasswordNeededError:
-                print("На аккаунте включена двухэтапная защита.")
-                password = getpass.getpass("Введите облачный пароль Telegram (ввод скрыт): ")
+                print(tr("two_step"))
+                password = getpass.getpass(tr("password"))
                 await client.sign_in(password=password)
                 break
             except (asyncio.TimeoutError, AuthTokenExpiredError):
                 print("\nВремя QR-кода истекло. Создаю новый...\n")
                 await qr.recreate()
         if not await client.is_user_authorized():
-            raise RuntimeError("QR-вход не завершился. Попробуйте ещё раз.")
+            raise RuntimeError(tr("qr_failed"))
         print("\n✅ Успешный вход в Telegram! Сессия сохранена локально.")
     finally:
         try:
@@ -318,9 +319,11 @@ async def authorize_qr(client: TelegramClient):
 
 async def main():
     print("=" * 65)
-    print(" TELEGRAM: ФОТО И ВИДЕО ИЗ ЧАТА — ВХОД ПО QR-КОДУ ")
+    print(tr("qr_app_title"))
     print("=" * 65)
     settings = read_settings()
+    configure_language(settings)
+    write_settings(settings)
     api_id, api_hash = get_api_credentials(settings)
     client = TelegramClient(str(BASE / "telegram_account"), api_id, api_hash,
                             flood_sleep_threshold=300, request_retries=5)
@@ -330,13 +333,13 @@ async def main():
         await authorize_qr(client)
         entity, peer_id, chat_name = await choose_chat(client)
         default_root = settings.get("download_folder") or str(BASE / "TelegramMedia")
-        raw_folder = input(f"Куда сохранять файлы? [Enter = {default_root}]: ").strip().strip('"')
+        raw_folder = input(f"{tr('save_to')} [Enter = {default_root}]: ").strip().strip('"')
         folder = Path(os.path.expandvars(raw_folder or default_root)).expanduser().resolve()
         settings["download_folder"] = str(folder)
         write_settings(settings)
-        mode = input("После выгрузки скачивать новые фото/видео до закрытия программы? [д/Н]: ").strip().lower()
+        mode = input(tr("watch_old")).strip().lower()
         watch = mode in ("д", "да", "y", "yes")
-        print(f"\nЧат: {chat_name} (ID: {peer_id})")
+        print(f"\n{tr('chat')} {chat_name} (ID: {peer_id})")
         print(f"Папка: {folder / f'chat_{peer_id}'}")
         downloader = Downloader(client, peer_id, folder)
         on_new_message = None
@@ -375,5 +378,5 @@ if __name__ == "__main__":
     except (KeyboardInterrupt, asyncio.CancelledError, EOFError):
         print("\nОстановлено. Уже скачанные файлы сохранены.")
     except Exception as exc:
-        print(f"\nОшибка: {type(exc).__name__}: {exc}")
-        print("Если это ошибка сети, проверьте связь с Telegram и попробуйте позже.")
+        print(f"\n{tr('error')} {type(exc).__name__}: {exc}")
+        print(tr("network"))
