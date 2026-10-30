@@ -243,7 +243,8 @@ async def main():
         if not 1 <= parallel <= 6:
             raise ValueError(tr("range_error"))
         write_settings(settings)
-        print(f"{tr('chat')} {chat_name}; {tr('directory')} {root / f"chat_{chat_id}"}; {tr('parallel')} {parallel}")
+        chat_path = root / ("chat_" + str(chat_id))
+        print(f"{tr('chat')} {chat_name}; {tr('directory')} {chat_path}; {tr('parallel')} {parallel}")
         dl = MultiDownloader(client, chat_id, root, parallel)
         tasks = set()
         try:
