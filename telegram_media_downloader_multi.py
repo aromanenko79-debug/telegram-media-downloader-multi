@@ -15,6 +15,7 @@ from rich.progress import ProgressBar
 from rich.panel import Panel
 
 # Reuse the tested QR sign-in, dialog selection and naming logic from the previous release.
+from i18n import tr, configure_language
 from telegram_media_downloader_qr import (
     BASE, read_settings, write_settings, get_api_credentials,
     authorize_qr, choose_chat, media_kind, media_extension, safe_folder_path,
@@ -124,7 +125,7 @@ class MultiDownloader:
                             self.active[mid] = (int(current), int(total or size))
                         result = await self.client.download_media(message, file=str(temp), progress_callback=progress)
                         if not result or not Path(result).is_file():
-                            raise RuntimeError('Telegram не вернул файл')
+                            raise RuntimeError(tr("no_file"))
                         got = Path(result).stat().st_size
                         if size and got != size:
                             raise IOError(f'неполный файл: {got} из {size} байт')
@@ -163,17 +164,17 @@ class MultiDownloader:
         table = Table(show_header=False, box=None, expand=True)
         table.add_column("Показатель", style="bold cyan", width=19, no_wrap=True)
         table.add_column("Значение")
-        table.add_row("Состояние", "Поиск завершён" if self.scan_done else "Сканирование истории...")
-        table.add_row("Общий прогресс", f"{pct:.1f}% известных данных  ({format_size(done)} / {format_size(total)})")
+        table.add_row(tr("state"), tr("scan_done") if self.scan_done else tr("scanning"))
+        table.add_row(tr("overall"), f"{pct:.1f}% {tr('known_data')}  ({format_size(done)} / {format_size(total)})")
         table.add_row("", ProgressBar(total=100, completed=pct, width=40))
-        table.add_row("Скорость", format_rate(self.last_speed * MIB))
-        table.add_row("Файлы", f"Найдено {self.discovered}  |  готово {self.existing+self.completed}  |  в работе {len(self.active)}  |  ошибок {self.failed}")
+        table.add_row(tr("speed"), format_rate(self.last_speed * MIB))
+        table.add_row(tr("files"), f"{tr('found')} {self.discovered}  |  {tr('complete')} {self.existing+self.completed}  |  {tr('active')} {len(self.active)}  |  {tr('errors')} {self.failed}")
         for mid, (current, expected) in list(self.active.items())[:self.parallel]:
             percentage = min(100.0, current * 100 / expected) if expected else 0.0
-            table.add_row(f"Видео/фото {mid}", f"{percentage:5.1f}%   {format_size(current)} / {format_size(expected)}")
+            table.add_row(f"{tr('media')} {mid}", f"{percentage:5.1f}%   {format_size(current)} / {format_size(expected)}")
             table.add_row("", ProgressBar(total=100, completed=percentage, width=40))
         if not self.scan_done:
-            table.add_row("Примечание", "Общий процент предварительный, пока идёт поиск файлов")
+            table.add_row(tr("note"), tr("provisional"))
         return Panel(table, title="Telegram Downloader MULTI", border_style="blue")
 
     async def reporter(self, live):
@@ -207,13 +208,13 @@ class MultiDownloader:
                 reporter.cancel()
                 await asyncio.gather(reporter, return_exceptions=True)
                 live.update(self.dashboard())
-        print(f'\nГОТОВО. Уже было: {self.existing}; скачано: {self.completed}; ошибок: {self.failed}.')
-        print('Папка:', self.base)
+        print(f'\n{tr('done_label')} {self.existing}; {tr('downloaded')} {self.completed}; {tr('errors')} {self.failed}.')
+        print(tr("folder"), self.base)
         if self.errors:
             report = self.base / 'download_errors.txt'
             report.write_text('\n'.join(f'{mid}: {err}' for mid, err in self.errors), encoding='utf-8')
-            print('Ошибки сохранены:', report)
-            print('Перезапустите программу для повторной попытки.')
+            print(tr("errors_saved"), report)
+            print(tr("retry"))
 
     def close(self):
         self.db.close()
@@ -221,9 +222,11 @@ class MultiDownloader:
 
 async def main():
     print('=' * 65)
-    print(' TELEGRAM MEDIA DOWNLOADER — ПАРАЛЛЕЛЬНЫЙ РЕЖИМ + ПРОЦЕНТЫ')
+    print(tr("multi_title"))
     print('=' * 65)
     settings = read_settings()
+    configure_language(settings)
+    write_settings(settings)
     api_id, api_hash = get_api_credentials(settings)
     client = TelegramClient(str(BASE / 'telegram_account'), api_id, api_hash,
                             flood_sleep_threshold=300, request_retries=5)
@@ -232,22 +235,22 @@ async def main():
         await authorize_qr(client)
         entity, chat_id, chat_name = await choose_chat(client)
         root_default = settings.get('download_folder') or r'E:\TelegramArchive'
-        typed = input(f'Папка архива [Enter = {root_default}]: ').strip().strip('"')
+        typed = input(f'{tr('archive_folder')} [Enter = {root_default}]: ').strip().strip('"')
         root = Path(os.path.expandvars(typed or root_default)).expanduser().resolve()
         settings['download_folder'] = str(root)
-        raw_parallel = input('Одновременные загрузки [Enter = 3, максимум 6]: ').strip()
+        raw_parallel = input(tr("concurrent")).strip()
         parallel = int(raw_parallel) if raw_parallel else 3
         if not 1 <= parallel <= 6:
-            raise ValueError('Количество загрузок должно быть от 1 до 6')
+            raise ValueError(tr("range_error"))
         write_settings(settings)
-        print(f'Чат: {chat_name}; каталог: {root / f"chat_{chat_id}"}; параллельно: {parallel}')
+        print(f'{tr('chat')} {chat_name}; {tr('directory')} {root / f"chat_{chat_id}"}; {tr('parallel')} {parallel}')
         dl = MultiDownloader(client, chat_id, root, parallel)
         tasks = set()
         try:
             await dl.run_history(entity)
-            watch = input('Отслеживать новые файлы до закрытия? [д/Н]: ').strip().casefold() in ('д','да','y','yes')
+            watch = input(tr("watch")).strip().casefold() in ('д','да','y','yes')
             if watch:
-                print('Ожидаю новые фото и видео. Ctrl+C — завершить.')
+                print(tr("waiting"))
                 # Watch mode uses semaphore around transfer but NOT around sqlite writes.
                 semaphore = asyncio.Semaphore(parallel)
                 async def save_new(message):
@@ -282,4 +285,4 @@ if __name__ == '__main__':
     except (KeyboardInterrupt, asyncio.CancelledError, EOFError):
         print('\nОстановлено. Готовые файлы и база сохранены.')
     except Exception as exc:
-        print(f'\nОшибка: {type(exc).__name__}: {exc}')
+        print(f'\n{tr('error')} {type(exc).__name__}: {exc}')
