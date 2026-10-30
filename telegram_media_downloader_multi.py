@@ -234,7 +234,7 @@ async def main():
     try:
         await authorize_qr(client)
         entity, chat_id, chat_name = await choose_chat(client)
-        root_default = settings.get('download_folder') or r'E:\TelegramArchive'
+        root_default = settings.get('download_folder') or str(Path.home() / 'Videos' / 'TelegramArchive')
         typed = input(f"{tr('archive_folder')} [Enter = {root_default}]: ").strip().strip('"')
         root = Path(os.path.expandvars(typed or root_default)).expanduser().resolve()
         settings['download_folder'] = str(root)
