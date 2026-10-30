@@ -78,5 +78,19 @@
   "watching_old": "Watching for new photos/videos. Press Ctrl+C to exit.",
   "stopped_old": "Stopped. Downloaded files were preserved.",
   "network": "If this is a network error, check connectivity and try again.",
-  "read_settings_error": "Could not read settings.json:"
+  "read_settings_error": "Could not read settings.json:",
+  "qr_save_png": "Could not save QR PNG:",
+  "qr_open_png": "If QR is hard to see in the terminal, open:",
+  "file_done": "files downloaded:",
+  "all_done": "DONE.",
+  "previous": "already present:",
+  "messages_checked": "Messages checked:",
+  "limit": "Telegram rate limit; wait",
+  "seconds": "sec.",
+  "repeat": "Retry download ID",
+  "failed_id": "Failed to download ID",
+  "save_folder": "Folder:",
+  "num_scanned": "messages;",
+  "old_count": "already present",
+  "downloaded_count": "downloaded"
 }
