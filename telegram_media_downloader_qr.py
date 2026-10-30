@@ -221,20 +221,20 @@ class Downloader:
                         self.conn.execute("INSERT OR REPLACE INTO saved VALUES (?,?,?)", (message.id, relative, count))
                         self.conn.commit()
                         self.saved_count += 1
-                        print(f"  + [{kind}] {file_path.name} ({count / 1024 / 1024:.1f} МБ)")
+                        print(f"  + [{kind}] {file_path.name} ({count / 1024 / 1024:.1f} MB)")
                         return
                     except FloodWaitError as exc:
-                        print(f"Telegram ограничил скорость; пауза {exc.seconds} сек.")
+                        print(f"{tr('limit')} {exc.seconds} {tr('seconds')}")
                         await asyncio.sleep(exc.seconds + 2)
                     except (OSError, ConnectionError, TimeoutError) as exc:
                         if attempt == 2:
                             raise
-                        print(f"Повтор загрузки ID {message.id}: {exc}")
+                        print(f"{tr('repeat')} {message.id}: {exc}")
                         await asyncio.sleep((attempt + 1) * 3)
                 raise RuntimeError(tr("max_retries"))
             except Exception as exc:
                 self.error_count += 1
-                print(f"  ! Не скачан ID {message.id}: {type(exc).__name__}: {exc}")
+                print(f"  ! {tr('failed_id')} {message.id}: {type(exc).__name__}: {exc}")
             finally:
                 if temp_path.exists():
                     try:
@@ -249,7 +249,7 @@ class Downloader:
             if self.scanned % 500 == 0:
                 print(f"{tr('checked')} {self.scanned} сообщений; скачано {self.saved_count}; уже было {self.existing_count}; {tr('errors')} {self.error_count}")
             await self.save(message)
-        print(f"\nГОТОВО. {tr('checked')} сообщений: {self.scanned}; скачано файлов: {self.saved_count}; уже было: {self.existing_count}; {tr('errors')} {self.error_count}.")
+        print(f"\n{tr('all_done')} {tr('messages_checked')} {self.scanned}; {tr('file_done')} {self.saved_count}; {tr('previous')} {self.existing_count}; {tr('errors')} {self.error_count}.")
         print(tr("folder"), self.base)
         if self.error_count:
             print(tr("if_errors"))
@@ -264,7 +264,7 @@ def display_qr(url: str, qr_file: Path):
     try:
         qr.make_image(fill_color="black", back_color="white").save(qr_file)
     except (OSError, RuntimeError) as exc:
-        print(f"Не получилось сохранить PNG QR-кода: {exc}")
+        print(f"{tr('qr_save_png')} {exc}")
     matrix = qr.get_matrix()
     # Тёмная консоль: светлые квадраты символами, чёрные — фон;
     # два вертикальных пикселя на один символ для правильных пропорций QR.
@@ -277,7 +277,7 @@ def display_qr(url: str, qr_file: Path):
                         "▄" if top_dark and not bottom_dark else
                         "▀" if not top_dark and bottom_dark else "█")
         print("".join(line))
-    print(f"Если QR плохо видно в консоли, откройте файл: {qr_file}")
+    print(f"{tr('qr_open_png')} {qr_file}")
 
 
 async def authorize_qr(client: TelegramClient):
