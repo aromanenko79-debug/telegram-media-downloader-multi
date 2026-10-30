@@ -247,7 +247,7 @@ class Downloader:
         async for message in self.client.iter_messages(entity, limit=None):
             self.scanned += 1
             if self.scanned % 500 == 0:
-                print(f"{tr('checked')} {self.scanned} сообщений; скачано {self.saved_count}; уже было {self.existing_count}; {tr('errors')} {self.error_count}")
+                print(f"{tr('checked')} {self.scanned} {tr('num_scanned')} {tr('downloaded_count')} {self.saved_count}; {tr('old_count')} {self.existing_count}; {tr('errors')} {self.error_count}")
             await self.save(message)
         print(f"\n{tr('all_done')} {tr('messages_checked')} {self.scanned}; {tr('file_done')} {self.saved_count}; {tr('previous')} {self.existing_count}; {tr('errors')} {self.error_count}.")
         print(tr("folder"), self.base)
@@ -340,7 +340,7 @@ async def main():
         mode = input(tr("watch_old")).strip().lower()
         watch = mode in ("д", "да", "y", "yes")
         print(f"\n{tr('chat')} {chat_name} (ID: {peer_id})")
-        print(f"Папка: {folder / f'chat_{peer_id}'}")
+        print(f"{tr('folder')} {folder / ('chat_' + str(peer_id))}")
         downloader = Downloader(client, peer_id, folder)
         on_new_message = None
         on_edited_message = None
