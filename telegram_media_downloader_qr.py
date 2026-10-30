@@ -44,7 +44,7 @@ def write_settings(settings):
 
 
 def get_api_credentials(settings):
-    print("\nАвторизация через ваш собственный Telegram (не бот BotFather).")
+    print("\n" + tr("api_intro"))
     print(tr("api_help"))
     if not str(settings.get("api_id", "")).isdigit():
         settings["api_id"] = input(tr("api_id")).strip()
@@ -104,7 +104,7 @@ def resolve_link_to_name(s):
 
 
 async def choose_chat(client):
-    print("\nПолучаю список доступных чатов…")
+    print("\n" + tr("dialogs"))
     dialogs = [d async for d in client.iter_dialogs()]
     if not dialogs:
         raise RuntimeError(tr("no_dialogs"))
@@ -115,7 +115,7 @@ async def choose_chat(client):
         print(tr("first30"))
 
     while True:
-        raw = input("\nВведите номер, название чата, @username или ссылку t.me: ").strip()
+        raw = input("\n" + tr("choose")).strip()
         if not raw:
             continue
         if raw.isdecimal():
@@ -243,7 +243,7 @@ class Downloader:
                         pass
 
     async def scan_history(self, entity):
-        print("\nСканирую всю доступную историю сообщений. Остановка: Ctrl+C.")
+        print("\n" + tr("scan_history"))
         async for message in self.client.iter_messages(entity, limit=None):
             self.scanned += 1
             if self.scanned % 500 == 0:
@@ -285,10 +285,10 @@ async def authorize_qr(client: TelegramClient):
     if await client.is_user_authorized():
         print(tr("already_auth"))
         return
-    print("\nВХОД ПО QR-КОДУ (никаких SMS не требуется)")
+    print("\n" + tr("qr_title"))
     print(tr("phone_steps"))
     print(tr("scan_qr"))
-    print("Если код устарел, программа создаст новый автоматически.\n")
+    print(tr("qr_expiry") + "\n")
     qr_file = BASE / "telegram_login_qr.png"
     try:
         qr = await client.qr_login()
@@ -305,11 +305,11 @@ async def authorize_qr(client: TelegramClient):
                 await client.sign_in(password=password)
                 break
             except (asyncio.TimeoutError, AuthTokenExpiredError):
-                print("\nВремя QR-кода истекло. Создаю новый...\n")
+                print("\n" + tr("qr_refresh") + "\n")
                 await qr.recreate()
         if not await client.is_user_authorized():
             raise RuntimeError(tr("qr_failed"))
-        print("\n✅ Успешный вход в Telegram! Сессия сохранена локально.")
+        print("\n" + tr("qr_success"))
     finally:
         try:
             qr_file.unlink(missing_ok=True)
@@ -356,7 +356,7 @@ async def main():
 
             await downloader.scan_history(entity)
             if watch:
-                print("\nСледим за новыми фото и видео. Для выхода нажмите Ctrl+C.")
+                print("\n" + tr("watching_old"))
                 await client.run_until_disconnected()
         finally:
             # Block new dispatches before the SQLite connection is closed.
@@ -376,7 +376,7 @@ if __name__ == "__main__":
     try:
         asyncio.run(main())
     except (KeyboardInterrupt, asyncio.CancelledError, EOFError):
-        print("\nОстановлено. Уже скачанные файлы сохранены.")
+        print("\n" + tr("stopped_old"))
     except Exception as exc:
         print(f"\n{tr('error')} {type(exc).__name__}: {exc}")
         print(tr("network"))
