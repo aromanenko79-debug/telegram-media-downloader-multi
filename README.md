@@ -45,3 +45,7 @@ The SQLite database tracks completed messages/files. Preserve the entire `chat_<
 - This is a personal-use Python project, not a packaged `.exe`.
 - Bulk history indexing means the overall percentage is provisional until the scan finishes.
 - The code has been syntax-checked; real-world compatibility depends on your Telegram account and system.
+
+## Session database locked
+
+If you see `sqlite3.OperationalError: database is locked`, close all instances of this downloader and wait a few seconds for Python to exit before restarting. Do not run QR and MULTI launchers concurrently from the same folder. The Windows launcher now uses a single-instance lock (`instance_lock.py`) to prevent two updated copies in one folder from opening the same Telegram session. **Keep `instance_lock.py` in the application folder.** Do not delete `.session` or your archive database to resolve a lock. If an older version is still running, stop it first.
