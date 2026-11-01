@@ -2,6 +2,7 @@
 # -*- coding: utf-8 -*-
 """Telegram media archive, QR login, bounded parallel downloads; Telethon 1.x."""
 import asyncio
+from instance_lock import single_instance
 import os
 import sqlite3
 import time
@@ -282,7 +283,8 @@ async def main():
 
 if __name__ == '__main__':
     try:
-        asyncio.run(main())
+        with single_instance(BASE):
+            asyncio.run(main())
     except (KeyboardInterrupt, asyncio.CancelledError, EOFError):
         print("\n" + tr("stopped"))
     except Exception as exc:
