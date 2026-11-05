@@ -8,7 +8,8 @@ A Windows-oriented personal Telegram photo/video archiver using Telethon, QR log
 
 ## Features
 
-- Export photos and videos from a selected chat accessible to your account.
+- Export Telegram photos, videos, and media uploaded as **documents/files**. Recognised image/video document formats go to `photos/` or `videos/`; all other document attachments go to `files/` so unknown media is not silently skipped.
+- Search chats by the **beginning of their title**; if no prefix match exists, substring matching is used. Use `*` and `?` wildcards. Duplicate titles are presented as numbered options with their Telegram IDs, types and public usernames (when available). No Telegram ID is required to select a search result.
 - Up to six parallel downloads, with per-file percentages and live aggregate progress/speed.
 - Adaptive sizes (KB/MB/GB/TB).
 - SQLite index helps avoid redownloading completed media after restart.
@@ -20,7 +21,7 @@ This is a portable Python project: **no D: drive or special installation folder 
 
 Keep all project files and the `locales` subfolder together. Double-click `start_multi_windows.cmd` in the extracted directory. You do not need to use `Program Files` or administrator privileges.
 
-**Program directory and media archive directory are separate.** Choose the archive location when prompted, for example `C:\Users\YOUR_NAME\Videos\TelegramArchive`. The application creates `chat_<id>/photos`, `chat_<id>/videos` and `chat_<id>/download_state.sqlite3` under the chosen archive directory. Ensure there is enough free space.
+**Program directory and media archive directory are separate.** Choose the archive location when prompted, for example `C:\Users\YOUR_NAME\Videos\TelegramArchive`. The application creates `chat_<id>/photos`, `chat_<id>/videos`, `chat_<id>/files`, and `chat_<id>/download_state.sqlite3` under the chosen archive directory. Ensure there is enough free space.
 
 Local `settings.json` and `telegram_account.session` live beside the Python scripts and must remain private. For an upgrade, extract a fresh version separately, copy these two local files into the new program folder, and leave the existing media archive and SQLite database in place.
 
