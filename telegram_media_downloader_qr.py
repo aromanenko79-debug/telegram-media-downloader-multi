@@ -58,21 +58,30 @@ def get_api_credentials(settings):
 
 
 def media_kind(message):
+    """Classify Telegram photos, videos, and documents sent as files.
+
+    Ordinary documents with unknown media type go to 'files' rather than being
+    silently skipped. Stickers are excluded.
+    """
     if not message or getattr(message, "sticker", None):
         return None
     if getattr(message, "photo", None):
         return "photos"
     if not getattr(message, "document", None):
         return None
+
     f = getattr(message, "file", None)
     mime = (getattr(f, "mime_type", "") or "").lower()
-    name = (getattr(f, "name", "") or "").lower()
+    name = (getattr(f, "name", "") or "")
     ext = Path(name).suffix.lower() or (getattr(f, "ext", "") or "").lower()
+
     if mime.startswith("image/") or ext in PHOTO_EXTS:
         return "photos"
     if getattr(message, "video", None) or mime.startswith("video/") or ext in VIDEO_EXTS:
         return "videos"
-    return None
+    # A media file may arrive as application/octet-stream with no recognizable
+    # filename. Keep it in files instead of losing it during archive scanning.
+    return "files"
 
 
 def media_extension(message, kind):
@@ -81,8 +90,10 @@ def media_extension(message, kind):
     f = getattr(message, "file", None)
     filename = getattr(f, "name", "") or ""
     extension = Path(filename).suffix.lower() or (getattr(f, "ext", "") or "").lower()
-    if not extension or not re.fullmatch(r"\.[a-z0-9]{1,8}", extension):
-        extension = mimetypes.guess_extension(getattr(f, "mime_type", "") or "") or (".jpg" if kind == "photos" else ".mp4")
+    if not re.fullmatch(r"\.[a-z0-9]{1,8}", extension):
+        extension = mimetypes.guess_extension(getattr(f, "mime_type", "") or "") or (
+            ".jpg" if kind == "photos" else ".mp4" if kind == "videos" else ".bin"
+        )
     return extension
 
 
@@ -104,6 +115,63 @@ def resolve_link_to_name(s):
     return s
 
 
+def find_dialogs(dialogs, query):
+    """Search by name prefix; fall back to a substring; support * and ? masks."""
+    from fnmatch import fnmatchcase
+
+    term = query.strip().casefold()
+    if not term:
+        return []
+    if "*" in term or "?" in term:
+        return [d for d in dialogs if fnmatchcase((d.name or "").casefold(), term)]
+    prefix = [d for d in dialogs if (d.name or "").casefold().startswith(term)]
+    if prefix:
+        return prefix
+    return [d for d in dialogs if term in (d.name or "").casefold()]
+
+
+def dialog_details(dialog):
+    """Show enough information to distinguish chats with identical titles."""
+    entity = dialog.entity
+    if getattr(dialog, "is_group", False):
+        kind = tr("kind_group")
+    elif getattr(dialog, "is_channel", False):
+        kind = tr("kind_channel")
+    elif getattr(dialog, "is_user", False):
+        kind = tr("kind_user")
+    else:
+        kind = tr("kind_other")
+    username = getattr(entity, "username", None)
+    handle = (" @" + username) if username else ""
+    return f"{dialog.name} [{kind}; ID {utils.get_peer_id(entity)}]{handle}"
+
+
+def select_dialog(matches):
+    """Numbered/paginated result picker; 0 or Enter means a new search."""
+    page_size = 20
+    page = 0
+    while True:
+        start = page * page_size
+        end = min(start + page_size, len(matches))
+        print(f"\n{tr('search_matches')} {len(matches)}; {tr('page')} {page + 1}/{(len(matches) - 1) // page_size + 1}")
+        for index in range(start, end):
+            print(f"  {index + 1:>3}. {dialog_details(matches[index])}")
+        answer = input(tr("select_result")).strip().casefold()
+        if answer in ("", "0", "b", "back"):
+            return None
+        if answer in ("n", "next") and end < len(matches):
+            page += 1
+            continue
+        if answer in ("p", "prev") and page > 0:
+            page -= 1
+            continue
+        if answer.isdecimal():
+            index = int(answer) - 1
+            if start <= index < end:
+                return matches[index]
+        print(tr("select_invalid"))
+
+
 async def choose_chat(client):
     print("\n" + tr("dialogs"))
     dialogs = [d async for d in client.iter_dialogs()]
@@ -111,9 +179,10 @@ async def choose_chat(client):
         raise RuntimeError(tr("no_dialogs"))
     print(f"{tr('dialog_count')} {len(dialogs)}")
     for i, d in enumerate(dialogs[:30], 1):
-        print(f"  {i:>3}. {d.name}")
+        print(f"  {i:>3}. {dialog_details(d)}")
     if len(dialogs) > 30:
         print(tr("first30"))
+    print(tr("search_hint"))
 
     while True:
         raw = input("\n" + tr("choose")).strip()
@@ -121,44 +190,44 @@ async def choose_chat(client):
             continue
         if raw.isdecimal():
             idx = int(raw) - 1
-            if 0 <= idx < len(dialogs):
+            if 0 <= idx < min(len(dialogs), 30):
                 d = dialogs[idx]
-                print(f"{tr('chosen')} {d.name}")
+                print(f"{tr('chosen')} {dialog_details(d)}")
                 return d.entity, utils.get_peer_id(d.entity), d.name
             print(tr("no_number"))
             continue
+
         found_private = re.search(r"(?:https?://)?t\.me/c/(\d+)", raw)
         if found_private:
             private_peer_id = -int("100" + found_private.group(1))
             match = next((d for d in dialogs if utils.get_peer_id(d.entity) == private_peer_id), None)
             if match:
-                print(f"{tr('chosen')} {match.name}")
+                print(f"{tr('chosen')} {dialog_details(match)}")
                 return match.entity, private_peer_id, match.name
             print(tr("private_missing"))
             continue
-        matches = [d for d in dialogs if raw.casefold() in (d.name or "").casefold()]
+
+        if raw.startswith("@") or raw.startswith(("t.me/", "https://t.me/", "http://t.me/")):
+            try:
+                entity = await client.get_entity(resolve_link_to_name(raw))
+            except Exception as exc:
+                print(f"{tr('cant_open')} {exc}. {tr('clarify')}")
+                continue
+            peer_id = utils.get_peer_id(entity)
+            display_name = utils.get_display_name(entity)
+            print(f"{tr('chosen')} {display_name} (ID {peer_id})")
+            return entity, peer_id, display_name
+
+        # Entering a full or partial name opens a numbered list, including
+        # every identically named chat, rather than asking for an obscure ID.
+        matches = find_dialogs(dialogs, raw)
         if matches:
-            if len(matches) == 1:
-                d = matches[0]
-                print(f"{tr('chosen')} {d.name}")
-                return d.entity, utils.get_peer_id(d.entity), d.name
-            print(tr("matches"))
-            for i, d in enumerate(matches[:50], 1):
-                print(f"  {i}. {d.name}")
-            num = input(tr("choose_match")).strip()
-            if num.isdecimal() and 1 <= int(num) <= min(len(matches), 50):
-                d = matches[int(num) - 1]
-                return d.entity, utils.get_peer_id(d.entity), d.name
+            selected = select_dialog(matches)
+            if selected:
+                print(f"{tr('chosen')} {dialog_details(selected)}")
+                return selected.entity, utils.get_peer_id(selected.entity), selected.name
             continue
-        try:
-            entity = await client.get_entity(resolve_link_to_name(raw))
-        except Exception as exc:
-            print(f"{tr('cant_open')} {exc}. {tr('clarify')}")
-            continue
-        peer_id = utils.get_peer_id(entity)
-        display_name = utils.get_display_name(entity)
-        print(f"{tr('chosen')} {display_name}")
-        return entity, peer_id, display_name
+        print(tr("no_matches"))
 
 
 class Downloader:
@@ -168,6 +237,7 @@ class Downloader:
         self.base = safe_folder_path(output_root, chat_id)
         (self.base / "photos").mkdir(parents=True, exist_ok=True)
         (self.base / "videos").mkdir(parents=True, exist_ok=True)
+        (self.base / "files").mkdir(parents=True, exist_ok=True)
         self.conn = sqlite3.connect(str(self.base / "download_state.sqlite3"))
         self.conn.execute("CREATE TABLE IF NOT EXISTS saved (message_id INTEGER PRIMARY KEY, relative_path TEXT NOT NULL, bytes INTEGER NOT NULL DEFAULT 0)")
         self.conn.commit()

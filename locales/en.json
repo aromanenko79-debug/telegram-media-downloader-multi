@@ -10,7 +10,7 @@
   "complete": "complete",
   "active": "active",
   "errors": "errors",
-  "media": "Video/photo",
+  "media": "Video/photo/file",
   "note": "Note",
   "provisional": "Overall percentage is provisional while scanning",
   "done_label": "DONE. Previously present:",
@@ -92,5 +92,15 @@
   "save_folder": "Folder:",
   "num_scanned": "messages;",
   "old_count": "already present",
-  "downloaded_count": "downloaded"
+  "downloaded_count": "downloaded",
+  "kind_group": "group",
+  "kind_channel": "channel",
+  "kind_user": "private chat",
+  "kind_other": "dialog",
+  "search_matches": "Matching chats:",
+  "page": "page",
+  "select_result": "Choose a number shown (N = next, P = previous, 0 or Enter = new search): ",
+  "select_invalid": "Choose a number from this page or N/P/0.",
+  "search_hint": "Search: enter the beginning of a chat name and press Enter. * and ? masks supported; choose a result number.",
+  "no_matches": "No matching chats. Try a different name, substring, or * mask."
 }
