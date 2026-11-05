@@ -2,6 +2,16 @@
 
 [English](README.md) | [Русский](README.ru.md)
 
+## What's new (November 2026)
+
+- **Media sent as files:** photos and videos uploaded as Telegram documents are now saved too. Recognised images/videos go to `photos/` and `videos/`; other attachments are kept in `files/`.
+- **Duplicate chat titles:** when several chats match a name, the app lists all matches with numbers, chat type, Telegram ID and username (if available). Select the chat by number.
+- **Faster chat selection:** type the beginning of a name and press Enter, use a substring if needed, or search with `*` and `?` masks. Long result lists are paginated.
+
+These changes preserve previously downloaded media and the existing per-chat SQLite index. Automated offline tests cover matching and attachment detection; live Telegram downloads still require Windows testing.
+
+
+
 **Language support:** English by default on first run, Russian available from the language menu. The selection is saved in `settings.json`. Translations live in `locales/en.json` and `locales/ru.json`.
 
 A Windows-oriented personal Telegram photo/video archiver using Telethon, QR login and a Rich live progress dashboard. Bilingual English/Russian interface.
