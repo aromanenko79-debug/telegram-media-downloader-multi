@@ -49,6 +49,7 @@ class MultiDownloader:
         self.base = safe_folder_path(root, chat_id)
         (self.base / 'photos').mkdir(parents=True, exist_ok=True)
         (self.base / 'videos').mkdir(parents=True, exist_ok=True)
+        (self.base / 'files').mkdir(parents=True, exist_ok=True)
         self.db = sqlite3.connect(str(self.base / 'download_state.sqlite3'))
         self.db.execute('CREATE TABLE IF NOT EXISTS saved (message_id INTEGER PRIMARY KEY, relative_path TEXT NOT NULL, bytes INTEGER NOT NULL DEFAULT 0)')
         self.db.commit()
